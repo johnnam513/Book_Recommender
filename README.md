@@ -20,3 +20,15 @@ Taek book informations from Naver. The result is in 'book_info'.
 
 ### book_info(total).zip
 The preprocessed data, which is used when making the recommender, is in this zip file.
+
+### models.py
+This python file consists followings.
+1. preprocess of book_info
+2. Visualizaton and Statistics
+3. recommender using TF-IDF
+4. recommender using Word2Vec
+5. recommender using Doc2Vec
+
+### Note
+1. This project is done in 'Data Mining' course in seoul national university.
+2. In order to run the code in your computer, you have to import pandas, konlpy, sklearn, gensim, ans bs4.
