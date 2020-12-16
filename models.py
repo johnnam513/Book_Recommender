@@ -1,3 +1,5 @@
+# Data Mining Project
+
 # preprocess
 
 import pandas as pd
@@ -15,18 +17,28 @@ for i in range(1,len(file_list)):
     csv=csv_base.format(file_list[i])
     df=pd.read_csv(csv,encoding='utf-8')
     df_total=pd.concat([df_total,df],axis=0).reset_index(drop=True)
-    
+
+# Preprocess 'Title'
+
 df_total=df_total.dropna(subset=['title'])
+
+# Preprocess duplicates
 
 df_total=df_total.drop_duplicates(['title'])
 df_total=df_total.reset_index(drop=True)
+
+# Preprocess nulls in 'introduction' and 'review' column
 
 df_total=df_total.dropna(subset=['introduction','review'],how='all')
 
 df_total=df_total.fillna('')
 df_total=df_total.reset_index(drop=True)
 
+# Preprocess as 'introduction'+'review'='text'
+
 df_total['text']=df_total[['introduction','review']].apply(lambda x:' '.join(x),axis=1)
+
+# Save as .csv
 
 df_total.to_csv('./book_info(total).csv',index=False,encoding='utf-8-sig')
 
@@ -50,6 +62,7 @@ plt.hist(len_text,50)
 plt.show()
 
 # TF-IDF Model
+
 import gc
 import konlpy
 from konlpy.tag import Kkma,Okt,Komoran
@@ -90,6 +103,7 @@ for i in range(5):
     print(book.title[idx[i]])
     
 # Word2Vec Model
+
 import pandas as pd
 import nltk
 from konlpy.tag import Okt
@@ -97,11 +111,15 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 df=pd.read_csv('./book_info(total).csv')
 
+# Stopwords
+df_stop=pd.read_csv('./한국어불용어100.txt',sep='\t',header=None,
+                   names=['stopword','else1','else2'])
+stop_word=[df_stop['stopword'][i] for i in range(len(df_stop))]
+
 okt=Okt()
 x_train=[]
 for sentence in df['text']:
-    temp_x=[]
-    temp_x=okt.nouns(sentence)
+    temp_x=[','.join(t[:-1]) for t in okt.pos(sentence) if ((t[1]=='Noun') & (t[0] not in stop_word))]
     x_train.append(temp_x)
     
 from gensim.models import Word2Vec
@@ -111,6 +129,8 @@ model=Word2Vec(x_train,size=150,window=10,min_count=100,workers=4)
 word_vectors=model.wv
 vocabs=word_vectors.vocab.keys()
 word_vectors_list=[word_vectors[v] for v in vocabs]
+
+# Visualization and Statistics
 
 list=[word for word in vocabs]
 
@@ -147,16 +167,24 @@ for i,v in enumerate(vocabs):
     
 plt.show()
 
+# Word2Vec model example
+
 return_doc=model.wv.most_similar(positive=['일본','추리'])
 
 for i in range(5):
     print(return_doc[i])
+
+# Document Vectorize and Model    
     
 model.init_sims(replace=True)
 
 def document_vector(model,doc):
-    doc=[word for word in doc if word in vocabs]
-    return np.mean(model[doc],axis=0)
+    doc=doc.split(' ')
+    doc=[doc[i] for i in range(len(doc)) if doc[i] in vocabs]
+    mean=0
+    for i in range(len(doc)):
+        mean+=model.wv[doc[i]]/len(doc)
+    return mean
 
 import math
 
@@ -174,7 +202,11 @@ def find_similarist_doc(model,doc):
     a=document_vector(model,doc)
     cos_vec=np.array([0.0]*len(df))
     for i in range(len(df)):
-        cos_vec[i]=-cos_sim(a,document_vector(model,df.text[i]))
+        b=document_vector(model,df.text[i])
+        try:
+            cos_vec[i]=-cos_sim(a,b)
+        except:
+            cos_vec[i]=0
     s=cos_vec.argsort()
     return (s[0],s[1],s[2],s[3],s[4])
 
